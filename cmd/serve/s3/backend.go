@@ -14,7 +14,10 @@ import (
 	"github.com/rclone/rclone/vfs"
 )
 
-var emptyPrefix = &gofakes3.Prefix{}
+var (
+	emptyPrefix = &gofakes3.Prefix{}
+	timeFormat  = "Mon, 2 Jan 2006 15:04:05 GMT"
+)
 
 type SimpleBucketBackend struct {
 	lock sync.Mutex
@@ -129,9 +132,11 @@ func (db *SimpleBucketBackend) HeadObject(bucketName, objectName string) (*gofak
 	}
 
 	return &gofakes3.Object{
-		Name:     objectName,
-		Hash:     []byte(hash),
-		Metadata: map[string]string{},
+		Name: objectName,
+		Hash: []byte(hash),
+		Metadata: map[string]string{
+			"Last-Modified": stat.ModTime().Format(timeFormat),
+		},
 		Size:     size,
 		Contents: NoOpReadCloser{},
 	}, nil
@@ -189,9 +194,11 @@ func (db *SimpleBucketBackend) GetObject(bucketName, objectName string, rangeReq
 	}
 
 	return &gofakes3.Object{
-		Name:     objectName,
-		Hash:     []byte(hash),
-		Metadata: map[string]string{},
+		Name: objectName,
+		Hash: []byte(hash),
+		Metadata: map[string]string{
+			"Last-Modified": stat.ModTime().Format(timeFormat),
+		},
 		Size:     size,
 		Range:    rnge,
 		Contents: rdr,
