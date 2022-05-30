@@ -21,23 +21,39 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	initTime          = time.Now()
+// Options contains options for the http Server
+type Options struct {
+	//TODO add more options
 	defaultBucketName string
 	hostBucketMode    bool
 	skipBucketVerify  bool
 	hashName          string
-	hashType          = hash.None
+	hashType          hash.Type
+}
+
+// DefaultOpt is the default values used for Options
+var DefaultOpt = Options{
+	defaultBucketName: "rclone",
+	hostBucketMode:    false,
+	skipBucketVerify:  false,
+	hashName:          "",
+	hashType:          hash.None,
+}
+
+// Opt is options set by command line flags
+var (
+	Opt      = DefaultOpt
+	initTime = time.Now()
 )
 
 func init() {
 	flagSet := Command.Flags()
 	httpflags.AddFlags(flagSet)
 	vfsflags.AddFlags(flagSet)
-	flags.BoolVarP(flagSet, &skipBucketVerify, "skip-bucket-verify", "", false, "Skip bucket verification")
-	flags.BoolVarP(flagSet, &hostBucketMode, "host-bucket", "", false, "Whether to use bucket name in hostname (such as mybucket.local)")
-	flags.StringVarP(flagSet, &defaultBucketName, "bucket-name", "", "rclone", "Name of the busket to serve")
-	flags.StringVarP(flagSet, &hashName, "etag-hash", "", "", "Which hash to use for the ETag, or auto or blank for off")
+	flags.BoolVarP(flagSet, &Opt.skipBucketVerify, "skip-bucket-verify", "", Opt.skipBucketVerify, "Skip bucket verification")
+	flags.BoolVarP(flagSet, &Opt.hostBucketMode, "host-bucket", "", Opt.hostBucketMode, "Whether to use bucket name in hostname (such as mybucket.local)")
+	flags.StringVarP(flagSet, &Opt.defaultBucketName, "bucket-name", "", Opt.defaultBucketName, "Name of the busket to serve")
+	flags.StringVarP(flagSet, &Opt.hashName, "etag-hash", "", Opt.hashName, "Which hash to use for the ETag, or auto or blank for off")
 }
 
 // Command definition for cobra
@@ -57,17 +73,16 @@ Use --s3-bucket-name to set the bucket name. By default this is rclone.
 		cmd.CheckArgs(1, 1, command, args)
 		f := cmd.NewFsSrc(args)
 
-		hashType = hash.None
-		if hashName == "auto" {
-			hashType = f.Hashes().GetOne()
-		} else if hashName != "" {
-			err := hashType.Set(hashName)
+		if Opt.hashName == "auto" {
+			Opt.hashType = f.Hashes().GetOne()
+		} else if Opt.hashName != "" {
+			err := Opt.hashType.Set(Opt.hashName)
 			if err != nil {
 				return err
 			}
 		}
 		cmd.Run(false, false, command, func() error {
-			s := newServer(context.Background(), f, &httpflags.Opt)
+			s := newServer(context.Background(), f, &Opt)
 			err := s.Serve()
 			if err != nil {
 				return err
@@ -90,7 +105,7 @@ type Server struct {
 }
 
 // Make a new S3 Server to serve the remote
-func newServer(ctx context.Context, f fs.Fs, opt *httplib.Options) *Server {
+func newServer(ctx context.Context, f fs.Fs, opt *Options) *Server {
 	w := &Server{
 		f:   f,
 		ctx: ctx,
@@ -99,15 +114,15 @@ func newServer(ctx context.Context, f fs.Fs, opt *httplib.Options) *Server {
 
 	var newLogger Logger
 	w.faker = gofakes3.New(
-		newBackend(w.vfs),
-		gofakes3.WithHostBucket(hostBucketMode),
+		newBackend(w.vfs, opt),
+		gofakes3.WithHostBucket(opt.hostBucketMode),
 		gofakes3.WithLogger(newLogger),
 		gofakes3.WithRequestID(rand.Uint64()),
 		gofakes3.WithoutVersioning(),
 	)
 
 	w.handler = authMiddleware(w.faker.Server())
-	w.Server = httplib.NewServer(w.handler, opt)
+	w.Server = httplib.NewServer(w.handler, &httpflags.Opt)
 	return w
 }
 

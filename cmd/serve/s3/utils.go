@@ -82,14 +82,18 @@ func getFileHash(node vfs.Node) (string, error) {
 		return "", errors.New("not a file")
 	}
 
-	return o.Hash(context.Background(), hashType)
+	return o.Hash(context.Background(), Opt.hashType)
 }
 
-func prefixParser(p *gofakes3.Prefix) (path, remaining string) {
+func prefixParser(p *gofakes3.Prefix) (path, remaining string, ok bool) {
+	if !p.HasDelimiter || p.Delimiter != "/" {
+		return "", "", ok
+	}
+
 	idx := strings.LastIndexByte(p.Prefix, '/')
 	if idx < 0 {
-		return "", p.Prefix
+		return "", p.Prefix, true
 	} else {
-		return p.Prefix[:idx], p.Prefix[idx+1:]
+		return p.Prefix[:idx], p.Prefix[idx+1:], true
 	}
 }
