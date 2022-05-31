@@ -27,11 +27,9 @@ func TestS3(t *testing.T) {
 	start := func(f fs.Fs) (configmap.Simple, func()) {
 		httpflags.Opt.ListenAddr = endpoint
 		serveropt := &Options{
-			defaultBucketName: "rclone",
-			hostBucketMode:    false,
-			skipBucketVerify:  true,
-			hashName:          "",
-			hashType:          hash.None,
+			hostBucketMode: false,
+			hashName:       "",
+			hashType:       hash.None,
 		}
 
 		w := newServer(context.Background(), f, serveropt)
@@ -45,10 +43,7 @@ func TestS3(t *testing.T) {
 			"endpoint": "http://" + endpoint,
 		}
 
-		return config, func() {
-			w.Close()
-			w.Wait()
-		}
+		return config, func() {}
 	}
 
 	servetest.Run(t, "s3", start)

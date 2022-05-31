@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"time"
 
 	"github.com/johannesboyne/gofakes3"
 	"github.com/rclone/rclone/cmd"
@@ -24,35 +23,26 @@ import (
 // Options contains options for the http Server
 type Options struct {
 	//TODO add more options
-	defaultBucketName string
-	hostBucketMode    bool
-	skipBucketVerify  bool
-	hashName          string
-	hashType          hash.Type
+	hostBucketMode bool
+	hashName       string
+	hashType       hash.Type
 }
 
 // DefaultOpt is the default values used for Options
 var DefaultOpt = Options{
-	defaultBucketName: "rclone",
-	hostBucketMode:    false,
-	skipBucketVerify:  false,
-	hashName:          "",
-	hashType:          hash.None,
+	hostBucketMode: false,
+	hashName:       "",
+	hashType:       hash.None,
 }
 
 // Opt is options set by command line flags
-var (
-	Opt      = DefaultOpt
-	initTime = time.Now()
-)
+var Opt = DefaultOpt
 
 func init() {
 	flagSet := Command.Flags()
 	httpflags.AddFlags(flagSet)
 	vfsflags.AddFlags(flagSet)
-	flags.BoolVarP(flagSet, &Opt.skipBucketVerify, "skip-bucket-verify", "", Opt.skipBucketVerify, "Skip bucket verification")
 	flags.BoolVarP(flagSet, &Opt.hostBucketMode, "host-bucket", "", Opt.hostBucketMode, "Whether to use bucket name in hostname (such as mybucket.local)")
-	flags.StringVarP(flagSet, &Opt.defaultBucketName, "bucket-name", "", Opt.defaultBucketName, "Name of the busket to serve")
 	flags.StringVarP(flagSet, &Opt.hashName, "etag-hash", "", Opt.hashName, "Which hash to use for the ETag, or auto or blank for off")
 }
 
@@ -65,9 +55,6 @@ rclone serve s3 implements a basic s3 server to serve the
 remote over s3. This can be viewed with s3 client
 or you can make a remote of type s3 to read and write it.
 Note that some clients may require https endpoint.
- 
-### S3 options
-Use --s3-bucket-name to set the bucket name. By default this is rclone.
 ` + httplib.Help + vfs.Help,
 	RunE: func(command *cobra.Command, args []string) error {
 		cmd.CheckArgs(1, 1, command, args)
